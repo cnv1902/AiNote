@@ -97,17 +97,33 @@ API endpoints với versioning:
 
 ## 🚀 Chạy ứng dụng
 
-```bash
+### Windows (PowerShell)
+```powershell
+# Tạo và kích hoạt venv (khuyên dùng)
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+
 # Cài đặt dependencies
 pip install -r requirements.txt
 
-# Chạy development server
+# Tạo file .env (xem mẫu bên dưới)
+Copy-Item -Path .env.example -Destination .env -ErrorAction SilentlyContinue
+
+# Chạy development server (mặc định 8000)
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+### macOS/Linux (tuỳ chọn tham khảo)
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ## 📝 Environment Variables
 
-Tạo file `.env` với các biến sau:
+Tạo file `.env` với các biến sau (các biến bắt buộc được đánh dấu Required). Nếu một tính năng không dùng (ví dụ upload ảnh), có thể để trống nhóm biến liên quan nhưng những API gọi đến tính năng đó sẽ không hoạt động.
 
 ```env
 # Application
@@ -117,7 +133,7 @@ HOST=127.0.0.1
 PORT=8000
 
 # Database
-DATABASE_URL=postgresql://user:password@host:port/database
+DATABASE_URL=
 
 # JWT
 JWT_SECRET=your-secret-key
@@ -139,12 +155,29 @@ S3_REGION=ap-south-1
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=your-anon-key
 
-# LLM APIs
+# LLM Providers (chọn 1 trong các provider bên dưới)
+# - Nếu dùng Local (Ollama): để API_*_NAME trống, đặt API_* là base URL và MODEL_* là model name
+# - Nếu dùng cloud (GPT/GEMINI/GROCK/DEEPSEEK/CLAUDE): đặt *_NAME theo provider và cung cấp API key tương ứng
+
+# Cấu hình chung
+API_EXTRACT_NAME=
 API_EXTRACT_TEXT=http://localhost:11434
 MODEL_EXTRACT_TEXT=llava:7b
+API_CHAT_NAME=
 API_CHAT=http://localhost:11434
 MODEL_CHAT=llama3.1:8b
+
+# API Keys (tuỳ provider)
+OPENAI_API_KEY=
+GEMINI_API_KEY=
+GROCK_API_KEY=
+DEEPSEEK_API_KEY=
+ANTHROPIC_API_KEY=
 ```
+
+Gợi ý nhanh:
+- Local OCR + Chat qua Ollama: để trống `API_EXTRACT_NAME` và `API_CHAT_NAME`, đặt `API_EXTRACT_TEXT=http://localhost:11434`, `MODEL_EXTRACT_TEXT=llava:7b`, `API_CHAT=http://localhost:11434`, `MODEL_CHAT=llama3.1:8b`.
+- Dùng OpenAI: đặt `API_CHAT_NAME=GPT`, `OPENAI_API_KEY=...`, `MODEL_CHAT=gpt-4o-mini` (hoặc model tương thích). OCR có thể dùng `API_EXTRACT_NAME=GPT` với model multimodal.
 
 ## 🔄 Migration từ cấu trúc cũ
 
@@ -185,6 +218,21 @@ from app.core.security import hash_password
 Sau khi chạy server, truy cập:
 - Swagger UI: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
+
+## 🗄️ Database & FTS (PostgreSQL)
+
+- Ứng dụng tự tạo bảng và trigger FTS (Full-Text Search) khi khởi động lần đầu, không cần Alembic cho chạy thử.
+- Yêu cầu PostgreSQL với extension `plpgsql` (mặc định đã bật). Biến `FTS_CONFIG` có thể đặt `simple`, `english`, `vietnamese` (tuỳ DB đã cài dict).
+
+## 🧪 Kiểm tra nhanh
+
+```powershell
+# Health check
+Invoke-WebRequest http://localhost:8000/health | Select-Object -ExpandProperty Content
+
+# Mở docs
+Start-Process http://localhost:8000/docs
+```
 
 ## ✅ Lợi ích của cấu trúc mới
 
