@@ -1,5 +1,5 @@
 """
-Database connection and session management.
+Quản lý kết nối và session cơ sở dữ liệu.
 """
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
@@ -7,7 +7,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from .config import settings
 
 
-# Create database engine
+# Tạo database engine
 engine = create_engine(
     settings.DATABASE_URL,
     pool_pre_ping=True,
@@ -15,17 +15,17 @@ engine = create_engine(
     max_overflow=20,
 )
 
-# Create session factory
+# Tạo session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Create declarative base for models
+# Tạo declarative base cho models
 Base = declarative_base()
 
 
 def get_db() -> Session:
     """
-    Dependency function to get database session.
-    Yields a session and ensures it's closed after use.
+    Hàm dependency để lấy database session.
+    Yields một session và đảm bảo nó được đóng sau khi sử dụng.
     """
     db = SessionLocal()
     try:

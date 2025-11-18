@@ -1,5 +1,5 @@
 """
-SQLAlchemy ORM models for the application.
+Các model SQLAlchemy ORM cho ứng dụng.
 """
 import uuid
 from datetime import datetime
@@ -64,7 +64,7 @@ class Note(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True)
     title: Mapped[str | None] = mapped_column(Text, nullable=True)
     content: Mapped[str | None] = mapped_column(Text, nullable=True)
-    content_tsv = Column(TSVECTOR)  # maintained by trigger
+    content_tsv = Column(TSVECTOR)  # được duy trì bởi trigger
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
@@ -93,12 +93,13 @@ class File(Base):
 
     note: Mapped["Note"] = relationship(back_populates="files")
     image_metadata: Mapped["ImageMetadata"] = relationship(back_populates="file", cascade="all, delete-orphan", uselist=False)
+    ocr_texts: Mapped[list["OcrText"]] = relationship(back_populates="file", cascade="all, delete-orphan")
 
 
 class ImageMetadata(Base):
     __tablename__ = "image_metadata"
 
-    # enforce 1-1 with file
+    # đảm bảo quan hệ 1-1 với file
     file_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("files.id", ondelete="CASCADE"), primary_key=True
     )
@@ -128,6 +129,8 @@ class OcrText(Base):
     text_tsv = Column(TSVECTOR)
     ocr_confidence = Column(Numeric(5, 2))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    file: Mapped["File"] = relationship(back_populates="ocr_texts")
 
     __table_args__ = (
         Index("ix_ocr_texts_tsv", text_tsv, postgresql_using="gin"),

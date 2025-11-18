@@ -1,5 +1,5 @@
 """
-CRUD operations for authentication tokens.
+Các thao tác CRUD cho token xác thực.
 """
 from uuid import UUID
 from datetime import datetime, timezone
@@ -15,7 +15,7 @@ def create_refresh_token(
     token_hash: str,
     expires_at: datetime,
 ) -> AuthRefreshToken:
-    """Create a new refresh token record."""
+    """Tạo bản ghi refresh token mới."""
     token = AuthRefreshToken(
         user_id=user_id,
         token_hash=token_hash,
@@ -30,7 +30,7 @@ def get_valid_refresh_token(
     db: Session,
     token_hash: str,
 ) -> AuthRefreshToken | None:
-    """Get a valid (non-revoked) refresh token by its hash."""
+    """Lấy refresh token hợp lệ (chưa bị thu hồi) theo hash của nó."""
     return db.execute(
         select(AuthRefreshToken)
         .where(
@@ -44,7 +44,7 @@ def revoke_refresh_token(
     db: Session,
     token: AuthRefreshToken,
 ) -> AuthRefreshToken:
-    """Revoke a refresh token."""
+    """Thu hồi refresh token."""
     token.revoked_at = datetime.now(timezone.utc)
     db.add(token)
     return token

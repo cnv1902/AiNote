@@ -74,6 +74,7 @@
 }
 
 .search-input::placeholder {
+  transform: translateY(-2px);
   color: #9ca3af;
 }
 
@@ -218,10 +219,10 @@
 
 .fab-container {
   position: fixed;
-  bottom: 80px;
+  bottom: 160px;
   right: 20px;
   z-index: 200;
-}
+}  
 
 .fab-menu {
   position: absolute;
@@ -280,6 +281,9 @@
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
   transition: transform 0.2s, box-shadow 0.2s;
+}
+.fab:hover  {
+  transform: translateY(-2px);
 }
 
 .fab:active {

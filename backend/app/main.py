@@ -1,5 +1,5 @@
 """
-Main FastAPI application entry point.
+Điểm vào chính của ứng dụng FastAPI.
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,16 +16,16 @@ from app.api.v1.notes import router as notes_router
 
 def init_database_safely():
     """
-    Initialize database safely with lock to avoid conflicts between workers.
-    Uses PostgreSQL advisory locks to ensure only one worker initializes the database.
+    Khởi tạo cơ sở dữ liệu an toàn với lock để tránh xung đột giữa các worker.
+    Sử dụng PostgreSQL advisory locks để đảm bảo chỉ một worker khởi tạo cơ sở dữ liệu.
     """
     max_retries = 3
-    wait_time = 2  # seconds
+    wait_time = 2  # giây
     
     for attempt in range(max_retries):
         try:
             with engine.begin() as conn:
-                # Try to acquire advisory lock
+                # Thử lấy advisory lock
                 lock_result = conn.execute(
                     text("SELECT pg_try_advisory_lock(123456) as acquired")
                 )
@@ -37,7 +37,7 @@ def init_database_safely():
                     continue
                 
                 try:
-                    # Check if tables already exist
+                    # Kiểm tra xem các bảng đã tồn tại chưa
                     table_exists = conn.execute(
                         text(
                             "SELECT EXISTS (SELECT FROM information_schema.tables "
@@ -46,15 +46,15 @@ def init_database_safely():
                     ).scalar()
                     
                     if not table_exists:
-                        print("🔄 Creating database tables...")
+                        print("🔄 Đang tạo các bảng cơ sở dữ liệu...")
                         Base.metadata.create_all(bind=engine)
                         install_notes_fts(conn, settings.FTS_CONFIG)
                         install_ocr_fts(conn, settings.FTS_CONFIG)
-                        print("✅ Database initialized successfully")
+                        print("✅ Khởi tạo cơ sở dữ liệu thành công")
                     else:
-                        print("✅ Database already initialized")
+                        print("✅ Cơ sở dữ liệu đã được khởi tạo")
                 finally:
-                    # Release advisory lock
+                    # Giải phóng advisory lock
                     conn.execute(text("SELECT pg_advisory_unlock(123456)"))
                 break
                 
@@ -62,52 +62,52 @@ def init_database_safely():
             if attempt < max_retries - 1:
                 time.sleep(wait_time)
             else:
-                print(f"⚠️ Could not initialize database after {max_retries} attempts")
-                print(f"Error: {str(e)}")
+                print(f"⚠️ Không thể khởi tạo cơ sở dữ liệu sau {max_retries} lần thử")
+                print(f"Lỗi: {str(e)}")
 
 
 def create_app() -> FastAPI:
-    """Create and configure the FastAPI application."""
+    """Tạo và cấu hình ứng dụng FastAPI."""
     app = FastAPI(
         title="AiNote API",
         version="1.0.0",
-        description="AI-powered note-taking application with OCR and entity extraction",
+        description="Ứng dụng ghi chú hỗ trợ AI với OCR và trích xuất thực thể",
     )
 
-    # Configure CORS
+    # Cấu hình CORS
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # Configure appropriately for production
+        allow_origins=["*"],  # Cấu hình phù hợp cho production
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
 
-    # Include routers
+    # Bao gồm routers
     app.include_router(auth_router, prefix=settings.API_PREFIX)
     app.include_router(notes_router, prefix=settings.API_PREFIX)
 
     @app.on_event("startup")
     def on_startup():
-        """Initialize database on application startup."""
+        """Khởi tạo cơ sở dữ liệu khi ứng dụng khởi động."""
         init_database_safely()
 
     @app.get("/")
     def root():
-        """Root endpoint."""
+        """Endpoint gốc."""
         return {
-            "message": "Welcome to AiNote API",
+            "message": "Chào mừng đến với AiNote API",
             "version": "1.0.0",
             "docs": "/docs"
         }
 
     @app.get("/health")
     def health_check():
-        """Health check endpoint."""
+        """Endpoint kiểm tra sức khỏe."""
         return {"status": "healthy"}
 
     return app
 
 
-# Create application instance
+# Tạo instance ứng dụng
 app = create_app()

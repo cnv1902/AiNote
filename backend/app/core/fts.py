@@ -1,5 +1,5 @@
 """
-Full-text search setup for PostgreSQL.
+Thiết lập tìm kiếm toàn văn cho PostgreSQL.
 """
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
@@ -7,13 +7,13 @@ from sqlalchemy.engine import Connection
 
 def install_notes_fts(conn: Connection, cfg: str = "simple"):
     """
-    Install full-text search triggers for notes table.
+    Cài đặt trigger tìm kiếm toàn văn cho bảng notes.
     
     Args:
-        conn: Database connection
-        cfg: PostgreSQL text search configuration (default: "simple")
+        conn: Kết nối cơ sở dữ liệu
+        cfg: Cấu hình tìm kiếm văn bản PostgreSQL (mặc định: "simple")
     """
-    # Create or replace the trigger function
+    # Tạo hoặc thay thế hàm trigger
     conn.execute(
         text(
             f"""
@@ -35,7 +35,7 @@ $fn$ LANGUAGE plpgsql;
         )
     )
 
-    # Create the trigger only if not exists
+    # Tạo trigger chỉ khi chưa tồn tại
     conn.execute(
         text(
             """
@@ -55,13 +55,13 @@ END$$;
 
 def install_ocr_fts(conn: Connection, cfg: str = "simple"):
     """
-    Install full-text search triggers for ocr_texts table.
+    Cài đặt trigger tìm kiếm toàn văn cho bảng ocr_texts.
     
     Args:
-        conn: Database connection
-        cfg: PostgreSQL text search configuration (default: "simple")
+        conn: Kết nối cơ sở dữ liệu
+        cfg: Cấu hình tìm kiếm văn bản PostgreSQL (mặc định: "simple")
     """
-    # Create or replace the trigger function
+    # Tạo hoặc thay thế hàm trigger
     conn.execute(
         text(
             f"""
@@ -75,7 +75,7 @@ $fn$ LANGUAGE plpgsql;
         )
     )
 
-    # Create the trigger only if not exists
+    # Tạo trigger chỉ khi chưa tồn tại
     conn.execute(
         text(
             """

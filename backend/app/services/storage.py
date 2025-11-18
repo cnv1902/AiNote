@@ -1,5 +1,5 @@
 """
-Storage service for managing file uploads and deletions.
+Dịch vụ lưu trữ để quản lý tải lên và xóa file.
 """
 import uuid
 import boto3
@@ -10,7 +10,7 @@ from app.core.config import settings
 
 
 class StorageService:
-    """Service for interacting with S3-compatible storage (Supabase)."""
+    """Dịch vụ để tương tác với lưu trữ tương thích S3 (Supabase)."""
     
     def __init__(self):
         self.s3_client = boto3.client(
@@ -31,15 +31,15 @@ class StorageService:
         content_type: str = "image/jpeg"
     ) -> Tuple[str, str]:
         """
-        Upload image to storage and return the public URL and storage key.
+        Tải hình ảnh lên kho lưu trữ và trả về URL công khai và storage key.
         
         Args:
-            file_data: Binary image data
-            filename: Original filename
-            content_type: MIME type of the file
+            file_data: Dữ liệu hình ảnh nhị phân
+            filename: Tên file gốc
+            content_type: Loại MIME của file
             
         Returns:
-            Tuple of (public_url, storage_key)
+            Tuple của (public_url, storage_key)
         """
         try:
             file_extension = filename.split('.')[-1] if '.' in filename else 'jpg'
@@ -56,17 +56,17 @@ class StorageService:
             return public_url, unique_filename
             
         except ClientError as e:
-            raise Exception(f"Failed to upload image: {str(e)}")
+            raise Exception(f"Tải lên hình ảnh thất bại: {str(e)}")
 
     def delete_image_by_key(self, storage_key: str) -> bool:
         """
-        Delete image from storage using storage key.
+        Xóa hình ảnh từ kho lưu trữ bằng storage key.
         
         Args:
-            storage_key: The unique key of the file in storage
+            storage_key: Khóa duy nhất của file trong kho lưu trữ
             
         Returns:
-            True if deletion was successful
+            True nếu xóa thành công
         """
         try:
             self.s3_client.delete_object(
@@ -75,18 +75,18 @@ class StorageService:
             )
             return True
         except Exception as e:
-            print(f"Failed to delete image: {str(e)}")
+            print(f"Không thể xóa hình ảnh: {str(e)}")
             return False
 
     def delete_image(self, image_url: str) -> bool:
         """
-        Delete image from storage using the image URL.
+        Xóa hình ảnh từ kho lưu trữ bằng URL hình ảnh.
         
         Args:
-            image_url: The public URL of the image
+            image_url: URL công khai của hình ảnh
             
         Returns:
-            True if deletion was successful
+            True nếu xóa thành công
         """
         try:
             if f"/object/public/{self.bucket_name}/" in image_url:
@@ -94,9 +94,9 @@ class StorageService:
                 return self.delete_image_by_key(key)
             return False
         except Exception as e:
-            print(f"Failed to delete image: {str(e)}")
+            print(f"Không thể xóa hình ảnh: {str(e)}")
             return False
 
 
-# Singleton instance
+# Instance singleton
 storage_service = StorageService()

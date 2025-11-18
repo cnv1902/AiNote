@@ -1,5 +1,5 @@
 """
-Authentication endpoints.
+Các endpoint xác thực.
 """
 import uuid
 from datetime import datetime, timezone
@@ -31,7 +31,7 @@ from app.crud.auth import (
 from app.schemas import UserCreate, UserOut, TokenPair, TokenRefreshIn
 from app.api.dependencies import get_current_user
 from app.models import User
-from app.utils import hash_text_sha256
+from app.core.utils import hash_text_sha256
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -39,7 +39,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 def register(data: UserCreate, db: Session = Depends(get_db)):
-    """Register a new user."""
+    """Đăng ký người dùng mới."""
     existing = get_user_by_email(db, data.email)
     if existing:
         raise HTTPException(
@@ -64,7 +64,7 @@ def login(
     form: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):
-    """Login with email/username and password."""
+    """Đăng nhập bằng email/username và mật khẩu."""
     user = get_user_by_email_or_username(db, form.username)
     
     if not user or not verify_password(form.password, user.password_hash):
@@ -73,15 +73,15 @@ def login(
             detail="Thông tin đăng nhập không hợp lệ"
         )
     
-    # Update password hash if needed
+    # Cập nhật hash mật khẩu nếu cần
     if pwd_context.needs_update(user.password_hash):
         update_user_password(db, user, hash_password(form.password))
 
-    # Create tokens
+    # Tạo tokens
     access = create_access_token(str(user.id))
     refresh, exp = create_refresh_token(str(user.id))
     
-    # Store refresh token
+    # Lưu refresh token
     create_refresh_token_record(
         db,
         user_id=user.id,
@@ -96,7 +96,7 @@ def login(
 
 @router.post("/refresh", response_model=TokenPair)
 def refresh_token(data: TokenRefreshIn, db: Session = Depends(get_db)):
-    """Refresh access token using refresh token."""
+    """Làm mới access token bằng refresh token."""
     hashed = hash_text_sha256(data.refresh_token)
     token_row = get_valid_refresh_token(db, hashed)
     
@@ -106,7 +106,7 @@ def refresh_token(data: TokenRefreshIn, db: Session = Depends(get_db)):
             detail="Mã thông báo làm mới không hợp lệ"
         )
 
-    # Decode and validate token
+    # Giải mã và xác thực token
     try:
         payload = decode_token(data.refresh_token)
     except Exception:
@@ -135,18 +135,18 @@ def refresh_token(data: TokenRefreshIn, db: Session = Depends(get_db)):
             detail="Người dùng không hoạt động"
         )
 
-    # Check expiration
+    # Kiểm tra thời hạn
     if datetime.now(timezone.utc) >= token_row.expires_at:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Mã thông báo đã hết hạn"
         )
 
-    # Create new tokens
+    # Tạo tokens mới
     access = create_access_token(user_id)
     new_refresh, exp = create_refresh_token(user_id)
     
-    # Revoke old token and create new one
+    # Thu hồi token cũ và tạo token mới
     revoke_refresh_token(db, token_row)
     create_refresh_token_record(
         db,
@@ -162,5 +162,5 @@ def refresh_token(data: TokenRefreshIn, db: Session = Depends(get_db)):
 
 @router.get("/me", response_model=UserOut)
 def get_current_user_info(current_user: User = Depends(get_current_user)):
-    """Get current user information."""
+    """Lấy thông tin người dùng hiện tại."""
     return current_user

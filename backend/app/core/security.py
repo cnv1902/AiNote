@@ -1,5 +1,5 @@
 """
-Security utilities for authentication and authorization.
+Tiện ích bảo mật cho xác thực và phân quyền.
 """
 from datetime import datetime, timedelta, timezone
 from jose import jwt
@@ -7,26 +7,30 @@ from passlib.context import CryptContext
 
 from .config import settings
 
-
+# Thiết lập context mã hóa mật khẩu - hỗ trợ cả bcrypt_sha256 và bcrypt (cũ)
 pwd_context = CryptContext(
-    schemes=["bcrypt"],
-    deprecated="auto",
-    bcrypt__rounds=12,
+    schemes=["bcrypt_sha256", "bcrypt"],
+    deprecated=["bcrypt"],  # Đánh dấu bcrypt là cũ, sẽ tự động chuyển sang bcrypt_sha256 khi đăng nhập
 )
 
-
 def hash_password(password: str) -> str:
-    """Hash a password using bcrypt."""
+    """
+    Mã hóa mật khẩu bằng bcrypt_sha256.
+    """
     return pwd_context.hash(password)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password against its hash."""
+    """
+    Kiểm tra mật khẩu với mã hóa đã lưu.
+    """
     return pwd_context.verify(plain_password, hashed_password)
 
 
 def create_access_token(subject: str) -> str:
-    """Create a JWT access token."""
+    """
+    Tạo access token JWT.
+    """
     expires = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRES_MINUTES)
     payload = {
         "sub": subject,
@@ -37,7 +41,9 @@ def create_access_token(subject: str) -> str:
 
 
 def create_refresh_token(subject: str) -> tuple[str, datetime]:
-    """Create a JWT refresh token. Returns (token, expiration_datetime)."""
+    """
+    Tạo refresh token JWT. Trả về (token, thời gian hết hạn).
+    """
     expires = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRES_DAYS)
     payload = {
         "sub": subject,
@@ -49,5 +55,7 @@ def create_refresh_token(subject: str) -> tuple[str, datetime]:
 
 
 def decode_token(token: str) -> dict:
-    """Decode and validate a JWT token."""
+    """
+    Giải mã và kiểm tra tính hợp lệ của JWT token.
+    """
     return jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])

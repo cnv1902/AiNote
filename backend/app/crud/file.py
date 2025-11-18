@@ -1,5 +1,5 @@
 """
-CRUD operations for File and related models.
+Các thao tác CRUD cho model File và các model liên quan.
 """
 from uuid import UUID
 from datetime import datetime
@@ -18,7 +18,7 @@ def create_file(
     mime_type: str | None = None,
     size_bytes: int | None = None,
 ) -> File:
-    """Create a new file record."""
+    """Tạo bản ghi file mới."""
     file = File(
         user_id=user_id,
         note_id=note_id,
@@ -38,7 +38,7 @@ def create_image_metadata(
     file_id: UUID,
     metadata: dict,
 ) -> ImageMetadata:
-    """Create image metadata record."""
+    """Tạo bản ghi siêu dữ liệu hình ảnh."""
     image_metadata = ImageMetadata(
         file_id=file_id,
         camera_make=metadata.get('camera_make'),
@@ -63,7 +63,7 @@ def create_ocr_text(
     text: str | None,
     confidence: float | None = None,
 ) -> OcrText:
-    """Create OCR text record."""
+    """Tạo bản ghi văn bản OCR."""
     ocr_record = OcrText(
         file_id=file_id,
         user_id=user_id,
@@ -84,7 +84,7 @@ def create_extracted_entity(
     note_id: UUID | None = None,
     confidence: float | None = None,
 ) -> ExtractedEntity:
-    """Create extracted entity record."""
+    """Tạo bản ghi thực thể đã trích xuất."""
     entity = ExtractedEntity(
         file_id=file_id,
         note_id=note_id,

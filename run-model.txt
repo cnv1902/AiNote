@@ -2,3 +2,4 @@ ollama run llama3.1:8b
 API_CHAT = "http://localhost:11434"
 ollama pull qwen2.5vl:3b
 uvicorn app.main:app --workers 4 --host 0.0.0.0 --port 8000
+uvicorn app.main:app --reload

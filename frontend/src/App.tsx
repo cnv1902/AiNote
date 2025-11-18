@@ -7,6 +7,7 @@ import { Notes } from './components/Notes';
 import { CreateNote } from './components/CreateNote';
 import { UpdateNote } from './components/UpdateNote';
 import './App.css';
+import { ChatWidget } from './components/ChatWidget';
 
 function AppContent() {
   const [showLogin, setShowLogin] = useState(true);
@@ -55,35 +56,46 @@ function AppContent() {
 
   if (currentView === 'create') {
     return (
-      <CreateNote
-        type={createType}
-        onBack={() => {
-          window.location.hash = '#/';
-          setCurrentView('list');
-        }}
-        onSaved={() => {
-          // Refresh notes list
-        }}
-      />
+      <>
+        <CreateNote
+          type={createType}
+          onBack={() => {
+            window.location.hash = '#/';
+            setCurrentView('list');
+          }}
+          onSaved={() => {
+            // Refresh notes list
+          }}
+        />
+        <ChatWidget />
+      </>
     );
   }
 
   if (currentView === 'update') {
     return (
-      <UpdateNote
-        noteId={editNoteId}
-        onBack={() => {
-          window.location.hash = '#/';
-          setCurrentView('list');
-        }}
-        onSaved={() => {
-          // Refresh notes list
-        }}
-      />
+      <>
+        <UpdateNote
+          noteId={editNoteId}
+          onBack={() => {
+            window.location.hash = '#/';
+            setCurrentView('list');
+          }}
+          onSaved={() => {
+            // Refresh notes list
+          }}
+        />
+        <ChatWidget />
+      </>
     );
   }
 
-  return <Notes />;
+  return (
+    <>
+      <Notes />
+      <ChatWidget />
+    </>
+  );
 }
 
 function App() {

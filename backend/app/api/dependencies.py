@@ -1,5 +1,5 @@
 """
-API dependencies for authentication and common dependencies.
+Các dependency API cho xác thực và các dependency chung.
 """
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -20,10 +20,10 @@ def get_current_user(
     db: Session = Depends(get_db)
 ) -> User:
     """
-    Dependency to get the current authenticated user.
+    Dependency để lấy người dùng đã xác thực hiện tại.
     
     Raises:
-        HTTPException: If authentication fails
+        HTTPException: Nếu xác thực thất bại
     """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,

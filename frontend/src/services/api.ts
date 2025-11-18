@@ -109,6 +109,15 @@ export interface TokenPair {
   token_type: string;
 }
 
+// QA API types
+export interface AnswerOut {
+  question: string;
+  answer: string;
+  relevant_notes: Note[];
+  query_type: string;
+  confidence?: number | null;
+}
+
 // Auth API
 export const authAPI = {
   register: async (email: string, username: string, password: string): Promise<User> => {
@@ -165,6 +174,14 @@ export const notesAPI = {
 
   delete: async (id: string): Promise<void> => {
     await api.delete(`/notes/${id}`);
+  },
+};
+
+// QA API
+export const qaAPI = {
+  ask: async (question: string): Promise<AnswerOut> => {
+    const response = await api.post('/notes/ask', { question });
+    return response.data;
   },
 };
 

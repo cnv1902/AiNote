@@ -1,5 +1,5 @@
 """
-CRUD operations for User model.
+Các thao tác CRUD cho model User.
 """
 from uuid import UUID
 from sqlalchemy.orm import Session
@@ -11,19 +11,19 @@ from app.core.security import hash_password
 
 
 def get_user_by_id(db: Session, user_id: UUID) -> User | None:
-    """Get user by ID."""
+    """Lấy người dùng theo ID."""
     return db.get(User, user_id)
 
 
 def get_user_by_email(db: Session, email: str) -> User | None:
-    """Get user by email."""
+    """Lấy người dùng theo email."""
     return db.execute(
         select(User).where(User.email == email)
     ).scalar_one_or_none()
 
 
 def get_user_by_email_or_username(db: Session, identifier: str) -> User | None:
-    """Get user by email or username."""
+    """Lấy người dùng theo email hoặc username."""
     return db.execute(
         select(User).where(
             (User.email == identifier) | (User.username == identifier)
@@ -32,7 +32,7 @@ def get_user_by_email_or_username(db: Session, identifier: str) -> User | None:
 
 
 def create_user(db: Session, user_in: UserCreate) -> User:
-    """Create a new user."""
+    """Tạo người dùng mới."""
     user = User(
         email=user_in.email,
         username=user_in.username,
@@ -44,7 +44,7 @@ def create_user(db: Session, user_in: UserCreate) -> User:
 
 
 def update_user_password(db: Session, user: User, new_password_hash: str) -> User:
-    """Update user password."""
+    """Cập nhật mật khẩu người dùng."""
     user.password_hash = new_password_hash
     db.add(user)
     return user

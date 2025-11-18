@@ -1,5 +1,5 @@
 """
-Pydantic schemas for request/response validation.
+Các schema Pydantic để xác thực request/response.
 """
 from datetime import datetime
 from uuid import UUID
@@ -7,7 +7,7 @@ from uuid import UUID
 from pydantic import BaseModel, EmailStr, Field
 
 
-# User
+# Người dùng
 class UserBase(BaseModel):
     email: EmailStr
     username: str | None = None
@@ -30,7 +30,7 @@ class UserOut(UserBase):
         from_attributes = True
 
 
-# Auth
+# Xác thực
 class TokenPair(BaseModel):
     access_token: str
     refresh_token: str
@@ -41,7 +41,7 @@ class TokenRefreshIn(BaseModel):
     refresh_token: str
 
 
-# Notes
+# Ghi chú
 class NoteCreate(BaseModel):
     title: str | None = None
     content: str | None = None
@@ -54,7 +54,7 @@ class NoteUpdate(BaseModel):
 
 class NoteImageUpload(BaseModel):
     title: str | None = None
-    # content will be set to image URL after upload
+    # content sẽ được đặt thành URL hình ảnh sau khi tải lên
 
 
 class ImageMetadataOut(BaseModel):
@@ -111,6 +111,31 @@ class NoteOut(BaseModel):
     created_at: datetime
     updated_at: datetime
     files: list[FileOut] = []
+
+    class Config:
+        from_attributes = True
+
+
+# Q&A
+class QuestionIn(BaseModel):
+    question: str = Field(min_length=1, max_length=1000)
+
+
+class AnswerOut(BaseModel):
+    question: str
+    answer: str
+    relevant_notes: list[NoteOut] = []
+    query_type: str
+    confidence: float | None = None
+
+
+class QAHistoryOut(BaseModel):
+    id: UUID
+    user_id: UUID
+    question: str
+    context: dict | None = None
+    response: dict | None = None
+    created_at: datetime
 
     class Config:
         from_attributes = True

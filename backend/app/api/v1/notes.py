@@ -1,5 +1,5 @@
 """
-Notes endpoints.
+Các endpoint ghi chú.
 """
 import uuid
 from typing import List
@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.models import User
-from app.schemas import NoteCreate, NoteUpdate, NoteOut
+from app.schemas import NoteCreate, NoteUpdate, NoteOut, QuestionIn, AnswerOut, QAHistoryOut
 from app.api.dependencies import get_current_user
 from app.crud.note import (
     get_note_by_id,
@@ -24,10 +24,17 @@ from app.crud.file import (
     create_ocr_text,
     create_extracted_entity,
 )
+from app.crud.qa import (
+    create_qa_request,
+    get_user_qa_history,
+    get_qa_request_by_id,
+    delete_qa_request,
+)
 from app.services.storage import storage_service
 from app.services.image import image_service
 from app.services.ocr import ocr_service
 from app.services.llm import llm_service
+from app.services.smart_retrieval import SmartRetrieval
 
 
 router = APIRouter(prefix="/notes", tags=["notes"])
@@ -39,10 +46,9 @@ async def create_note(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    """Create a new note."""
+    """Tạo ghi chú mới."""
     note = crud_create_note(db, user.id, payload.title, payload.content)
     
-    # Extract entities if content exists
     if payload.content:
         try:
             entities_json = await llm_service.extract_entities(payload.content)
@@ -57,9 +63,9 @@ async def create_note(
                     data=data,
                     note_id=note.id,
                 )
-                print(f"✓ Stored extracted entity for note type={entity_type}")
+                print(f"✓ Đã lưu thực thể trích xuất cho ghi chú loại={entity_type}")
         except Exception as e:
-            print(f"⚠ Failed to extract entities: {e}")
+            print(f"⚠ Không thể trích xuất thực thể: {e}")
 
     db.commit()
     db.refresh(note)
@@ -73,7 +79,7 @@ async def create_note_with_image(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    """Create a note with an uploaded image."""
+    """Tạo ghi chú với hình ảnh đã tải lên."""
     if not image.content_type or not image.content_type.startswith('image/'):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -83,7 +89,6 @@ async def create_note_with_image(
     try:
         image_data = await image.read()
         
-        # Upload to storage
         try:
             image_url, storage_key = storage_service.upload_image(
                 file_data=image_data,
@@ -96,7 +101,6 @@ async def create_note_with_image(
                 detail=f"Tải lên S3 thất bại: {str(e)}"
             )
         
-        # Create note
         note = crud_create_note(
             db,
             user_id=user.id,
@@ -104,7 +108,6 @@ async def create_note_with_image(
             content=None
         )
         
-        # Create file record
         file_record = create_file(
             db,
             user_id=user.id,
@@ -116,16 +119,14 @@ async def create_note_with_image(
             size_bytes=len(image_data)
         )
         
-        # Extract and store image metadata
         try:
             exif_data = image_service.extract_exif_data(image_data)
             if exif_data:
                 metadata = image_service.parse_metadata(exif_data)
                 create_image_metadata(db, file_record.id, metadata)
         except Exception as e:
-            print(f"Warning: Could not extract EXIF metadata: {str(e)}")
+            print(f"Cảnh báo: Không thể trích xuất siêu dữ liệu EXIF: {str(e)}")
         
-        # Extract text via OCR
         try:
             ocr_text, ocr_confidence = await ocr_service.extract_text(
                 image_data, 
@@ -140,9 +141,8 @@ async def create_note_with_image(
                     text=ocr_text,
                     confidence=ocr_confidence
                 )
-                print(f"OCR extracted {len(ocr_text)} characters")
+                print(f"OCR đã trích xuất {len(ocr_text)} ký tự")
                 
-                # Extract entities from OCR text
                 try:
                     entities_json = await llm_service.extract_entities(ocr_text)
                     if entities_json and isinstance(entities_json, dict):
@@ -156,12 +156,11 @@ async def create_note_with_image(
                             data=data,
                             file_id=file_record.id,
                         )
-                        print(f"✓ Stored extracted entity type={entity_type}")
+                        print(f"✓ Đã lưu thực thể trích xuất loại={entity_type}")
                 except Exception as e:
-                    print(f"⚠ Failed to extract entities: {e}")
+                    print(f"⚠ Không thể trích xuất thực thể: {e}")
         except Exception as e:
-            print(f"Warning: Could not extract text via OCR: {str(e)}")
-        
+            print(f"Cảnh báo: Không thể trích xuất văn bản qua OCR: {str(e)}")
         db.commit()
         db.refresh(note)
         return note
@@ -184,7 +183,7 @@ def list_notes(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    """List all notes for the current user."""
+    """Liệt kê tất cả ghi chú của người dùng hiện tại."""
     notes = get_user_notes(db, user.id, include_archived=False)
     return notes
 
@@ -195,12 +194,12 @@ def get_note(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    """Get a specific note by ID."""
+    """Lấy một ghi chú cụ thể theo ID."""
     note = get_note_by_id(db, note_id, user.id)
     if not note:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Note not found"
+            detail="Không tìm thấy ghi chú"
         )
     return note
 
@@ -212,12 +211,12 @@ def update_note(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    """Update a note."""
+    """Cập nhật ghi chú."""
     note = get_note_by_id(db, note_id, user.id)
     if not note:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Note not found"
+            detail="Không tìm thấy ghi chú"
         )
     
     crud_update_note(db, note, payload.title, payload.content)
@@ -232,22 +231,172 @@ def delete_note(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    """Delete a note."""
+    """Xóa ghi chú."""
     note = get_note_by_id(db, note_id, user.id)
     if not note:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Note not found"
+            detail="Không tìm thấy ghi chú"
         )
     
-    # Delete associated files from storage
+    # Xóa các file liên quan từ kho lưu trữ
     if note.files:
         for file in note.files:
             try:
                 storage_service.delete_image_by_key(file.storage_key)
             except Exception as e:
-                print(f"Failed to delete image from storage: {str(e)}")
+                print(f"Không thể xóa hình ảnh từ kho lưu trữ: {str(e)}")
     
     crud_delete_note(db, note)
+    db.commit()
+    return None
+
+
+@router.post("/ask", response_model=AnswerOut)
+async def ask_question(
+    payload: QuestionIn,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    """
+    Trả lời câu hỏi của người dùng dựa trên ghi chú của họ.
+    Sử dụng smart retrieval để tìm ghi chú liên quan và LLM để tạo câu trả lời.
+    """
+    question = payload.question.strip()
+    
+    if not question:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Câu hỏi không được để trống"
+        )
+    
+    try:
+        retrieval = SmartRetrieval(db)
+        
+        query_type = retrieval.analyze_query_type(question)
+        
+        relevant_notes_with_scores = await retrieval.retrieve_relevant_notes(
+            question=question,
+            user_id=user.id,
+            limit=5
+        )
+        
+        if not relevant_notes_with_scores:
+            return AnswerOut(
+                question=question,
+                answer="Xin lỗi, tôi không tìm thấy ghi chú nào liên quan đến câu hỏi của bạn.",
+                relevant_notes=[],
+                query_type=query_type,
+                confidence=0.0
+            )
+        
+        context_parts = []
+        for i, (note, score) in enumerate(relevant_notes_with_scores[:3], 1):
+            note_text = f"**Ghi chú {i}**"
+            if note.title:
+                note_text += f"\nTiêu đề: {note.title}"
+            if note.content:
+                note_text += f"\nNội dung: {note.content}"
+            
+            for file in note.files:
+                if hasattr(file, 'ocr_texts') and file.ocr_texts:
+                    for ocr in file.ocr_texts:
+                        if ocr.text:
+                            note_text += f"\nVăn bản từ hình ảnh: {ocr.text}"
+            
+            context_parts.append(note_text)
+        context = "\n\n---\n\n".join(context_parts)
+        answer = await llm_service.answer_question(question, context)
+        if not answer:
+            answer = "Xin lỗi, tôi không thể tạo câu trả lời cho câu hỏi của bạn lúc này."
+
+        max_score = relevant_notes_with_scores[0][1] if relevant_notes_with_scores else 0
+        confidence = min(max_score * 100, 100.0) if max_score > 0 else 50.0
+        relevant_notes = [note for note, _ in relevant_notes_with_scores]
+        
+        # Lưu lịch sử chat
+        try:
+            qa_context = {
+                "query_type": query_type,
+                "relevant_note_ids": [str(note.id) for note in relevant_notes],
+                "scores": [float(score) for _, score in relevant_notes_with_scores]
+            }
+            qa_response = {
+                "answer": answer,
+                "confidence": confidence,
+                "note_count": len(relevant_notes)
+            }
+            create_qa_request(
+                db,
+                user_id=user.id,
+                question=question,
+                context=qa_context,
+                response=qa_response
+            )
+            db.commit()
+        except Exception as e:
+            print(f"⚠ Không thể lưu lịch sử Q&A: {e}")
+            # Không raise lỗi, tiếp tục trả về kết quả
+        
+        return AnswerOut(
+            question=question,
+            answer=answer,
+            relevant_notes=relevant_notes,
+            query_type=query_type,
+            confidence=confidence
+        )
+        
+    except Exception as e:
+        print(f"❌ Lỗi khi trả lời câu hỏi: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Không thể trả lời câu hỏi: {str(e)}"
+        )
+
+
+@router.get("/chat-history", response_model=List[QAHistoryOut])
+def get_chat_history(
+    limit: int = 50,
+    offset: int = 0,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    """Lấy lịch sử chat Q&A của người dùng."""
+    history = get_user_qa_history(db, user.id, limit=limit, offset=offset)
+    return history
+
+
+@router.get("/chat-history/{qa_id}", response_model=QAHistoryOut)
+def get_chat_detail(
+    qa_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    """Lấy chi tiết một bản ghi chat."""
+    qa_request = get_qa_request_by_id(db, qa_id, user.id)
+    if not qa_request:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy lịch sử chat"
+        )
+    return qa_request
+
+
+@router.delete("/chat-history/{qa_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_chat_history(
+    qa_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    """Xóa một bản ghi lịch sử chat."""
+    qa_request = get_qa_request_by_id(db, qa_id, user.id)
+    if not qa_request:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy lịch sử chat"
+        )
+    delete_qa_request(db, qa_request)
     db.commit()
     return None
