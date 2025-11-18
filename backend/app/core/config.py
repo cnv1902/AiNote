@@ -43,10 +43,19 @@ class Settings(BaseSettings):
     S3_REGION: str = "ap-south-1"
 
     # API LLM
+    API_EXTRACT_NAME: str = ""  # GPT, GEMINI, GROCK, DEEPSEEK, CLAUDE hoặc để trống cho local
     API_EXTRACT_TEXT: str | None = None
     MODEL_EXTRACT_TEXT: str | None = None
+    API_CHAT_NAME: str = ""  # GPT, GEMINI, GROCK, DEEPSEEK, CLAUDE hoặc để trống cho local
     API_CHAT: str | None = None
     MODEL_CHAT: str | None = None
+    
+    # API Keys cho các providers
+    OPENAI_API_KEY: str | None = None
+    GEMINI_API_KEY: str | None = None
+    GROCK_API_KEY: str | None = None
+    DEEPSEEK_API_KEY: str | None = None
+    ANTHROPIC_API_KEY: str | None = None
 
 
 settings = Settings()
