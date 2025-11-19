@@ -140,6 +140,33 @@
   gap: 16px;
 }
 
+.ocr-text-section {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+}
+
+.ocr-text-section h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #6b7280;
+}
+
+.ocr-text-section p {
+  white-space: pre-wrap;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #374151;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 6px;
+  margin: 0;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
 .image-preview {
   width: 100%;
   height: auto;

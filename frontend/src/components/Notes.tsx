@@ -130,7 +130,8 @@ export const Notes: React.FC = () => {
     const searchLower = searchQuery.toLowerCase();
     return (
       note.title?.toLowerCase().includes(searchLower) ||
-      note.content?.toLowerCase().includes(searchLower)
+      note.content_text?.toLowerCase().includes(searchLower) ||
+      note.ocr_text?.toLowerCase().includes(searchLower)
     );
   });
 
@@ -194,15 +195,17 @@ export const Notes: React.FC = () => {
                         <h3 className="note-title-mobile">
                           {note.title || 'Không có tiêu đề'}
                         </h3>
-                        {note.files && note.files.length > 0 ? (
+                        {note.raw_image_url ? (
                           <img 
-                            src={note.files[0].url || ''} 
+                            src={note.raw_image_url} 
                             alt={note.title || 'Note image'} 
                             className="note-image-preview"
                           />
-                        ) : note.content ? (
-                          <p className="note-preview">{note.content.substring(0, 100)}</p>
-                        ) : null}
+                        ) : note.content_text ? (
+                          <p className="note-preview">{note.content_text.substring(0, 100)}</p>
+                        ) : (
+                          <p className="note-preview-empty">Ghi chú trống</p>
+                        )}
                       </div>
                       <span className="note-date-mobile">{formatDate(note.created_at)}</span>
                     </div>

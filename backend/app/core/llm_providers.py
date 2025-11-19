@@ -339,7 +339,7 @@ def get_provider_and_config(provider_name: str, is_chat: bool = True) -> tuple[L
     config = {}
     
     if provider == LLMProvider.LOCAL:
-        config["base_url"] = settings.API_CHAT if is_chat else settings.API_EXTRACT_TEXT
+        config["base_url"] = settings.API_CHAT_NAME if is_chat else settings.API_EXTRACT_NAME
         config["model"] = settings.MODEL_CHAT if is_chat else settings.MODEL_EXTRACT_TEXT
         if not config["base_url"]:
             config["base_url"] = "http://localhost:11434"

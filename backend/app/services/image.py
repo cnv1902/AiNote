@@ -64,15 +64,15 @@ class ImageService:
             'extra': {}
         }
         
-        # Phân tích datetime
+        # Phân tích datetime (lưu dưới dạng chuỗi ISO để JSON serializable)
         datetime_str = exif_data.get('DateTimeOriginal') or exif_data.get('DateTime')
         if datetime_str:
             try:
-                metadata['datetime_original'] = datetime.strptime(
-                    datetime_str, '%Y:%m:%d %H:%M:%S'
-                )
-            except:
-                pass
+                dt = datetime.strptime(datetime_str, '%Y:%m:%d %H:%M:%S')
+                metadata['datetime_original'] = dt.isoformat()
+            except Exception:
+                # Nếu không parse được, lưu nguyên chuỗi
+                metadata['datetime_original'] = str(datetime_str)
         
         gps_info = exif_data.get('GPSInfo')
         if gps_info and isinstance(gps_info, dict):

@@ -36,10 +36,25 @@ class OCRService:
             image_base64 = OCRService.encode_image(image_data)
             
             ocr_prompt = (
-                "Bạn là một công cụ OCR. Trích xuất TẤT CẢ văn bản có thể nhìn thấy từ hình ảnh "
-                "CHÍNH XÁC như nó xuất hiện. Giữ nguyên dấu câu, dấu tiếng Việt, "
-                "ngắt dòng và khoảng trắng. KHÔNG dịch, tóm tắt hoặc giải thích. "
-                "Chỉ trả về văn bản thô đã trích xuất."
+                "Bạn là một công cụ OCR chuyên nghiệp, cực kỳ giỏi nhận diện cấu trúc. "
+                "Nhiệm vụ của bạn: Trích xuất TOÀN BỘ văn bản có trong hình ảnh một cách CHÍNH XÁC NHẤT, "
+                "giữ nguyên hoàn toàn định dạng và cấu trúc như trong ảnh.\n\n"
+
+                "Yêu cầu cụ thể:\n"
+                "- Giữ nguyên ngắt dòng, khoảng trắng, dấu câu, dấu tiếng Việt (ă, â, ê, ô, ơ, ư, đ...)\n"
+                "- Nếu có bảng (table), hãy xuất đúng dạng bảng bằng markdown, giữ nguyên các cột thẳng hàng, "
+                "không gộp ô, không bỏ dòng trống trong bảng\n"
+                "- Nếu có form, hóa đơn, biên lai: giữ nguyên thứ tự từ trên xuống dưới, từ trái sang phải\n"
+                "- Không thêm bất kỳ từ nào của bạn\n"
+                "- Không dịch, không tóm tắt, không giải thích, không đánh số\n"
+                "- Không bỏ bất kỳ chữ nào dù nhỏ, mờ hay bị cắt\n"
+                "- Chỉ trả về văn bản đã trích xuất (không có ngoặc, không có dấu đầu dòng thừa)\n\n"
+
+                "Ví dụ nếu ảnh có bảng:\n"
+                "| Tên sản phẩm     | Số lượng | Đơn giá   | Thành tiền |\n"
+                "|------------------|----------|-----------|------------|\n"
+                "| Gạo tám thơm     | 2        | 25.000    | 50.000     |\n"
+                "thì bạn phải xuất y hệt như vậy."
             )
             
             provider, config = get_provider_and_config(settings.API_EXTRACT_NAME, is_chat=False)

@@ -1,13 +1,13 @@
 """
-Thiết lập tìm kiếm toàn văn cho PostgreSQL.
+Thiết lập tìm kiếm toàn văn cho PostgreSQL trên bảng note_items.
 """
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
 
-def install_notes_fts(conn: Connection, cfg: str = "simple"):
+def install_note_items_fts(conn: Connection, cfg: str = "simple"):
     """
-    Cài đặt trigger tìm kiếm toàn văn cho bảng notes.
+    Cài đặt trigger tìm kiếm toàn văn cho bảng note_items.
     
     Args:
         conn: Kết nối cơ sở dữ liệu
@@ -17,17 +17,16 @@ def install_notes_fts(conn: Connection, cfg: str = "simple"):
     conn.execute(
         text(
             f"""
-CREATE OR REPLACE FUNCTION notes_tsv_trigger() RETURNS trigger AS $fn$
+CREATE OR REPLACE FUNCTION note_items_tsv_trigger() RETURNS trigger AS $fn$
 BEGIN
-    IF NEW.title = 'Ghi chú hình ảnh' THEN
-        IF NEW.content IS NULL OR NEW.content = '' THEN
-            NEW.content_tsv := to_tsvector('{cfg}', '');
-        ELSE
-            NEW.content_tsv := to_tsvector('{cfg}', NEW.content);
-        END IF;
-    ELSE
-        NEW.content_tsv := to_tsvector('{cfg}', coalesce(NEW.title,'') || ' ' || coalesce(NEW.content,''));
-    END IF;
+    -- Kết hợp title + content_text + ocr_text + image_metadata thành tsvector
+    NEW.tsv_content := to_tsvector(
+        '{cfg}',
+        coalesce(NEW.title,'') || ' ' ||
+        coalesce(NEW.content_text,'') || ' ' ||
+        coalesce(NEW.ocr_text,'') || ' ' ||
+        coalesce(NEW.image_metadata::text,'')
+    );
     RETURN NEW;
 END
 $fn$ LANGUAGE plpgsql;
@@ -42,50 +41,30 @@ $fn$ LANGUAGE plpgsql;
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_trigger WHERE tgname = 'notes_content_tsv_trigger'
+        SELECT 1 FROM pg_trigger WHERE tgname = 'note_items_tsv_content_trigger'
     ) THEN
-        CREATE TRIGGER notes_content_tsv_trigger BEFORE INSERT OR UPDATE OF title, content
-        ON notes FOR EACH ROW EXECUTE FUNCTION notes_tsv_trigger();
+        CREATE TRIGGER note_items_tsv_content_trigger
+        BEFORE INSERT OR UPDATE OF title, content_text, ocr_text, image_metadata
+        ON note_items
+        FOR EACH ROW EXECUTE FUNCTION note_items_tsv_trigger();
     END IF;
 END$$;
 """
         )
     )
-
-
-def install_ocr_fts(conn: Connection, cfg: str = "simple"):
-    """
-    Cài đặt trigger tìm kiếm toàn văn cho bảng ocr_texts.
     
-    Args:
-        conn: Kết nối cơ sở dữ liệu
-        cfg: Cấu hình tìm kiếm văn bản PostgreSQL (mặc định: "simple")
-    """
-    # Tạo hoặc thay thế hàm trigger
-    conn.execute(
-        text(
-            f"""
-CREATE OR REPLACE FUNCTION ocr_texts_tsv_trigger() RETURNS trigger AS $fn$
-BEGIN
-    NEW.text_tsv := to_tsvector('{cfg}', coalesce(NEW.text,''));
-    RETURN NEW;
-END
-$fn$ LANGUAGE plpgsql;
-"""
-        )
-    )
-
-    # Tạo trigger chỉ khi chưa tồn tại
+    # Tạo GIN index cho tsvector nếu chưa có
     conn.execute(
         text(
             """
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_trigger WHERE tgname = 'ocr_texts_tsv_trigger'
+        SELECT 1 FROM pg_indexes 
+        WHERE indexname = 'idx_note_items_tsv_content'
     ) THEN
-        CREATE TRIGGER ocr_texts_tsv_trigger BEFORE INSERT OR UPDATE OF text
-        ON ocr_texts FOR EACH ROW EXECUTE FUNCTION ocr_texts_tsv_trigger();
+        CREATE INDEX idx_note_items_tsv_content 
+        ON note_items USING GIN(tsv_content);
     END IF;
 END$$;
 """

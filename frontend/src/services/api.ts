@@ -66,41 +66,41 @@ export interface User {
 }
 
 export interface ImageMetadata {
-  file_id: string;
-  camera_make: string | null;
-  camera_model: string | null;
-  datetime_original: string | null;
-  gps_latitude: number | null;
-  gps_longitude: number | null;
-  width: number | null;
-  height: number | null;
-  orientation: number | null;
-  extra: unknown;
-  created_at: string;
+  width?: number | null;
+  height?: number | null;
+  camera_make?: string | null;
+  camera_model?: string | null;
+  orientation?: number | null;
+  datetime_original?: string | null;
+  gps_latitude?: number | null;
+  gps_longitude?: number | null;
+  extra?: Record<string, unknown>;
 }
 
-export interface NoteFile {
-  id: string;
-  user_id: string;
-  note_id: string | null;
-  storage_key: string;
-  url: string | null;
-  filename: string | null;
-  mime_type: string | null;
-  size_bytes: number | null;
-  created_at: string;
-  image_metadata: ImageMetadata | null;
+export interface NoteEntity {
+  type: string;
+  value: string;
+  confidence?: number;
+}
+
+export interface NoteEntities {
+  entity_type: string;
+  entities: NoteEntity[];
+  [key: string]: unknown;
 }
 
 export interface Note {
   id: string;
   user_id: string;
   title: string | null;
-  content: string | null;
+  content_text: string | null;      // Text từ note text
+  ocr_text: string | null;          // Text từ OCR image
+  raw_image_url: string | null;     // URL ảnh gốc
+  image_metadata: ImageMetadata | null;
+  entities: NoteEntities | null;    // Entities đã trích xuất
   is_archived: boolean;
   created_at: string;
   updated_at: string;
-  files: NoteFile[];
 }
 
 export interface TokenPair {
@@ -149,8 +149,8 @@ export const notesAPI = {
     return response.data;
   },
 
-  create: async (title: string | null, content: string | null): Promise<Note> => {
-    const response = await api.post('/notes/', { title, content });
+  create: async (title: string | null, content_text: string | null): Promise<Note> => {
+    const response = await api.post('/notes/', { title, content_text });
     return response.data;
   },
 
@@ -167,8 +167,8 @@ export const notesAPI = {
     return response.data;
   },
 
-  update: async (id: string, title: string | null, content: string | null): Promise<Note> => {
-    const response = await api.put(`/notes/${id}`, { title, content });
+  update: async (id: string, title: string | null, content_text: string | null): Promise<Note> => {
+    const response = await api.put(`/notes/${id}`, { title, content_text });
     return response.data;
   },
 

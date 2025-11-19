@@ -9,7 +9,7 @@ import random
 
 from app.core.config import settings
 from app.core.database import Base, engine
-from app.core.fts import install_notes_fts, install_ocr_fts
+from app.core.fts import install_note_items_fts
 from app.api.v1.auth import router as auth_router
 from app.api.v1.notes import router as notes_router
 
@@ -41,15 +41,14 @@ def init_database_safely():
                     table_exists = conn.execute(
                         text(
                             "SELECT EXISTS (SELECT FROM information_schema.tables "
-                            "WHERE table_name = 'notes')"
+                            "WHERE table_name = 'note_items')"
                         )
                     ).scalar()
                     
                     if not table_exists:
                         print("🔄 Đang tạo các bảng cơ sở dữ liệu...")
                         Base.metadata.create_all(bind=engine)
-                        install_notes_fts(conn, settings.FTS_CONFIG)
-                        install_ocr_fts(conn, settings.FTS_CONFIG)
+                        install_note_items_fts(conn, settings.FTS_CONFIG)
                         print("✅ Khởi tạo cơ sở dữ liệu thành công")
                     else:
                         print("✅ Cơ sở dữ liệu đã được khởi tạo")

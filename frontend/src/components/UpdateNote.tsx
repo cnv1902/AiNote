@@ -16,6 +16,7 @@ export const UpdateNote: React.FC<UpdateNoteProps> = ({ noteId, onBack, onSaved 
   const [originalContent, setOriginalContent] = useState<string>('');
   const [image, setImage] = useState<string | null>(null);
   const [originalImage, setOriginalImage] = useState<string | null>(null);
+  const [ocrText, setOcrText] = useState<string>('');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [noteType, setNoteType] = useState<'text' | 'image'>('text');
@@ -27,15 +28,18 @@ export const UpdateNote: React.FC<UpdateNoteProps> = ({ noteId, onBack, onSaved 
         const notesList = await notesAPI.list();
         const note = notesList.find((n: Note) => n.id === noteId);
         if (note) {
-          // Detect if image or text note - kiểm tra files thay vì content
-          if (note.files && note.files.length > 0) {
+          // Detect if image or text note
+          if (note.raw_image_url) {
             setNoteType('image');
-            setImage(note.files[0].url || null);
-            setOriginalImage(note.files[0].url || null);
+            setImage(note.raw_image_url);
+            setOriginalImage(note.raw_image_url);
+            setTitle(note.title || 'Ghi chú hình ảnh');
+            setOriginalTitle(note.title || 'Ghi chú hình ảnh');
+            setOcrText(note.ocr_text || '');
           } else {
             setNoteType('text');
             const noteTitle = note.title || '';
-            const noteContent = note.content || '';
+            const noteContent = note.content_text || '';
             setTitle(noteTitle);
             setContent(noteContent);
             setOriginalTitle(noteTitle);
@@ -78,7 +82,8 @@ export const UpdateNote: React.FC<UpdateNoteProps> = ({ noteId, onBack, onSaved 
       if (noteType === 'text') {
         await notesAPI.update(noteId, title || null, content.trim() || null);
       } else {
-        await notesAPI.update(noteId, 'Ghi chú hình ảnh', image);
+        // Image note: chỉ cập nhật title, không thay đổi ảnh
+        await notesAPI.update(noteId, title || 'Ghi chú hình ảnh', null);
       }
       onSaved();
       onBack();
@@ -108,15 +113,13 @@ export const UpdateNote: React.FC<UpdateNoteProps> = ({ noteId, onBack, onSaved 
             <path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </button>
-        {noteType === 'text' && (
-          <button 
-            onClick={handleSave} 
-            className="save-btn"
-            disabled={saving || !hasChanges()}
-          >
-            {saving ? 'Đang lưu...' : 'Lưu'}
-          </button>
-        )}
+        <button 
+          onClick={handleSave} 
+          className="save-btn"
+          disabled={saving || !hasChanges()}
+        >
+          {saving ? 'Đang lưu...' : 'Lưu'}
+        </button>
       </header>
 
       <main className="create-note-main">
