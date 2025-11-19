@@ -19,6 +19,8 @@ from app.crud.note import (
     delete_note as crud_delete_note,
     update_note_embedding,
     update_note_entities,
+    update_note_summary,
+    update_note_entity_type,
 )
 from app.crud.qa import (
     create_qa_request,
@@ -49,6 +51,8 @@ async def create_note(
     # Tạo embedding cho nội dung
     embedding = None
     entities = None
+    semantic_summary = None
+    entity_type = None
     
     if content_text:
         try:
@@ -67,10 +71,20 @@ async def create_note(
             entities_json = await llm_service.extract_entities(content_text)
             if entities_json and isinstance(entities_json, dict):
                 entities = entities_json
-                print(f"✓ Đã trích xuất entities type={entities.get('entity_type')}")
+                # Lấy entity_type từ JSON và lưu vào cột riêng
+                entity_type = entities_json.get('entity_type')
+                print(f"✓ Đã trích xuất entities type={entity_type}")
                 
         except Exception as e:
             print(f"⚠ Không thể trích xuất entities: {e}")
+        
+        try:
+            # Tạo semantic summary
+            semantic_summary = await llm_service.generate_semantic_summary(content_text)
+            if semantic_summary:
+                print(f"✓ Đã tạo semantic summary ({len(semantic_summary)} ký tự)")
+        except Exception as e:
+            print(f"⚠ Không thể tạo semantic summary: {e}")
     
     # Tạo note với đầy đủ thông tin
     note = crud_create_note(
@@ -78,6 +92,8 @@ async def create_note(
         user_id=user.id,
         title=payload.title,
         content_text=content_text,
+        semantic_summary=semantic_summary,
+        entity_type=entity_type,
         embedding=embedding,
         entities=entities
     )
@@ -145,6 +161,8 @@ async def create_note_with_image(
         # Tạo embedding và trích xuất entities từ OCR text
         embedding = None
         entities = None
+        semantic_summary = None
+        entity_type = None
         
         if ocr_text:
             try:
@@ -163,10 +181,20 @@ async def create_note_with_image(
                 entities_json = await llm_service.extract_entities(ocr_text)
                 if entities_json and isinstance(entities_json, dict):
                     entities = entities_json
-                    print(f"✓ Đã trích xuất entities type={entities.get('entity_type')}")
+                    # Lấy entity_type từ JSON và lưu vào cột riêng
+                    entity_type = entities_json.get('entity_type')
+                    print(f"✓ Đã trích xuất entities type={entity_type}")
                     
             except Exception as e:
                 print(f"⚠ Không thể trích xuất entities: {e}")
+            
+            try:
+                # Tạo semantic summary từ OCR text
+                semantic_summary = await llm_service.generate_semantic_summary(ocr_text)
+                if semantic_summary:
+                    print(f"✓ Đã tạo semantic summary ({len(semantic_summary)} ký tự)")
+            except Exception as e:
+                print(f"⚠ Không thể tạo semantic summary: {e}")
         
         # Tạo note với đầy đủ thông tin
         note = crud_create_note(
@@ -176,6 +204,8 @@ async def create_note_with_image(
             ocr_text=ocr_text,
             raw_image_url=image_url,
             image_metadata=image_metadata,
+            semantic_summary=semantic_summary,
+            entity_type=entity_type,
             embedding=embedding,
             entities=entities
         )
@@ -260,13 +290,28 @@ async def update_note(
             print(f"⚠ Không thể cập nhật embedding: {e}")
         
         try:
-            # Trích xuất entities mới
-            entities_json = await llm_service.extract_entities(content_text)
+            if payload.title is not None:
+                entities_json = await llm_service.extract_entities(payload.title + content_text)
+            else:
+                entities_json = await llm_service.extract_entities(content_text)
             if entities_json and isinstance(entities_json, dict):
                 update_note_entities(db, note, entities_json)
-                print(f"✓ Đã cập nhật entities")
+                # Cập nhật entity_type nếu có
+                entity_type = entities_json.get('entity_type')
+                if entity_type:
+                    update_note_entity_type(db, note, entity_type)
+                print(f"✓ Đã cập nhật entities type={entity_type}")
         except Exception as e:
             print(f"⚠ Không thể cập nhật entities: {e}")
+        
+        try:
+            # Tạo semantic summary mới
+            semantic_summary = await llm_service.generate_semantic_summary(content_text)
+            if semantic_summary:
+                update_note_summary(db, note, semantic_summary)
+                print(f"✓ Đã cập nhật semantic summary ({len(semantic_summary)} ký tự)")
+        except Exception as e:
+            print(f"⚠ Không thể cập nhật semantic summary: {e}")
     
     db.commit()
     db.refresh(note)

@@ -35,6 +35,25 @@ ENTITY_EXTRACTION_PROMPT = (
     "Chỉ trả về một đối tượng JSON."
 )
 
+SEMANTIC_SUMMARY_PROMPT = (
+    "Bạn là một trợ lý AI chuyên tạo bản tóm tắt theo nghĩa (semantic summary) của văn bản.\n\n"
+    "**Nhiệm vụ của bạn:**\n"
+    "1. Đọc và hiểu văn bản gốc (có thể là văn bản nhập tay hoặc từ OCR).\n"
+    "2. Xác định ý nghĩa chính và mục đích của văn bản.\n"
+    "3. Tạo một bản tóm tắt ngắn gọn dựa trên ý nghĩa (semantic summary) của văn bản.\n"
+    "   - Loại bỏ các từ dư thừa, lỗi OCR, và các câu không liên quan.\n"
+    "   - Giữ lại các ý chính liên quan đến nhiệm vụ, thời gian, đối tượng, tiêu đề, tên, danh sách, sự kiện, hoặc nội dung quan trọng.\n"
+    "   - Tóm tắt theo nghĩa, KHÔNG chỉ rút ngắn số ký tự.\n"
+    "   - Sử dụng ngôn ngữ tự nhiên, rõ ràng và súc tích.\n\n"
+    "**Ví dụ:**\n"
+    "Văn bản gốc: 'Họp team 15h chiều nay bàn về dự án website mới cần hoàn thành trước 30/12'\n"
+    "Tóm tắt: 'Cuộc họp team về dự án website mới, deadline 30/12'\n\n"
+    "Văn bản gốc: 'Mua sữa táo cà chua trứng bánh mì cho bữa sáng tuần này'\n"
+    "Tóm tắt: 'Danh sách mua sắm thực phẩm cho bữa sáng'\n\n"
+    "**Văn bản cần tóm tắt:**\n\"\"\"{note_text}\"\"\"\n\n"
+    "Chỉ trả về bản tóm tắt, không thêm giải thích hay định dạng JSON."
+)
+
 QA_ANSWER_PROMPT = (
     "Bạn là trợ lý AI thông minh giúp người dùng tìm thông tin từ ghi chú cá nhân của họ.\n\n"
     "**Nhiệm vụ của bạn:**\n"
@@ -215,6 +234,46 @@ class LLMService:
                     
         except Exception as e:
             print(f"❌ Lỗi không mong muốn khi trích xuất thực thể: {e}")
+            return None
+
+    @staticmethod
+    async def generate_semantic_summary(note_text: str) -> Optional[str]:
+        """
+        Tạo bản tóm tắt theo nghĩa (semantic summary) từ văn bản.
+        
+        Args:
+            note_text: Văn bản gốc (content_text hoặc ocr_text)
+            
+        Returns:
+            Bản tóm tắt theo nghĩa, hoặc None nếu thất bại
+        """
+        if not note_text or not note_text.strip():
+            return None
+
+        # Nếu văn bản quá ngắn (< 20 ký tự), không cần tóm tắt
+        if len(note_text.strip()) < 20:
+            return note_text.strip()
+
+        prompt = SEMANTIC_SUMMARY_PROMPT.format(note_text=note_text.strip())
+        
+        try:
+            print(f"ℹ Yêu cầu tạo semantic summary với provider={settings.API_CHAT_NAME or 'LOCAL'}")
+            
+            summary = await LLMService._call_llm_api(
+                prompt=prompt,
+                provider_name=settings.API_CHAT_NAME,
+                is_chat=True
+            )
+            
+            if summary:
+                summary = summary.strip()
+                print(f"✓ Đã tạo semantic summary ({len(summary)} ký tự)")
+                return summary
+            
+            return None
+                    
+        except Exception as e:
+            print(f"❌ Lỗi không mong muốn khi tạo semantic summary: {e}")
             return None
 
     @staticmethod

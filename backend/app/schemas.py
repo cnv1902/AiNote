@@ -60,6 +60,8 @@ class NoteOut(BaseModel):
     ocr_text: str | None
     raw_image_url: str | None
     image_metadata: dict | None
+    semantic_summary: str | None
+    entity_type: str | None
     entities: dict | None
     is_archived: bool
     created_at: datetime
@@ -92,3 +94,9 @@ class QAHistoryOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# Entity Types
+class EntityTypeInfo(BaseModel):
+    entity_type: str
+    count: int

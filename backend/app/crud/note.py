@@ -43,6 +43,8 @@ def create_note(
     ocr_text: str | None = None,
     raw_image_url: str | None = None,
     image_metadata: dict | None = None,
+    semantic_summary: str | None = None,
+    entity_type: str | None = None,
     embedding: dict | None = None,
     entities: dict | None = None
 ) -> NoteItem:
@@ -54,6 +56,8 @@ def create_note(
         ocr_text=ocr_text,
         raw_image_url=raw_image_url,
         image_metadata=image_metadata,
+        semantic_summary=semantic_summary,
+        entity_type=entity_type,
         embedding=embedding,
         entities=entities
     )
@@ -70,6 +74,8 @@ def update_note(
     ocr_text: str | None = None,
     raw_image_url: str | None = None,
     image_metadata: dict | None = None,
+    semantic_summary: str | None = None,
+    entity_type: str | None = None,
     embedding: dict | None = None,
     entities: dict | None = None
 ) -> NoteItem:
@@ -84,6 +90,10 @@ def update_note(
         note.raw_image_url = raw_image_url
     if image_metadata is not None:
         note.image_metadata = image_metadata
+    if semantic_summary is not None:
+        note.semantic_summary = semantic_summary
+    if entity_type is not None:
+        note.entity_type = entity_type
     if embedding is not None:
         note.embedding = embedding
     if entities is not None:
@@ -111,6 +121,28 @@ def update_note_entities(
 ) -> NoteItem:
     """Cập nhật entities cho ghi chú."""
     note.entities = entities
+    db.add(note)
+    return note
+
+
+def update_note_summary(
+    db: Session,
+    note: NoteItem,
+    semantic_summary: str
+) -> NoteItem:
+    """Cập nhật semantic summary cho ghi chú."""
+    note.semantic_summary = semantic_summary
+    db.add(note)
+    return note
+
+
+def update_note_entity_type(
+    db: Session,
+    note: NoteItem,
+    entity_type: str
+) -> NoteItem:
+    """Cập nhật entity type cho ghi chú."""
+    note.entity_type = entity_type
     db.add(note)
     return note
 
@@ -181,3 +213,42 @@ def count_user_notes(db: Session, user_id: UUID) -> int:
         select(func.count(NoteItem.id))
         .where(NoteItem.user_id == user_id, NoteItem.is_archived == False)
     ).scalar() or 0
+
+
+def get_notes_by_entity_type(
+    db: Session,
+    user_id: UUID,
+    entity_type: str,
+    limit: int = 100,
+    offset: int = 0
+) -> List[NoteItem]:
+    """Lấy tất cả ghi chú theo entity_type của một người dùng."""
+    query = (
+        select(NoteItem)
+        .where(
+            NoteItem.user_id == user_id,
+            NoteItem.entity_type == entity_type,
+            NoteItem.is_archived == False
+        )
+        .order_by(NoteItem.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    
+    return db.execute(query).scalars().all()
+
+
+def get_all_entity_types(db: Session, user_id: UUID) -> List[str]:
+    """Lấy danh sách tất cả entity_type duy nhất của user."""
+    result = db.execute(
+        select(NoteItem.entity_type)
+        .where(
+            NoteItem.user_id == user_id,
+            NoteItem.entity_type.isnot(None),
+            NoteItem.is_archived == False
+        )
+        .distinct()
+        .order_by(NoteItem.entity_type)
+    )
+    
+    return [row[0] for row in result.fetchall()]

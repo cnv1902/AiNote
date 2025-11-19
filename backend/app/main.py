@@ -12,6 +12,7 @@ from app.core.database import Base, engine
 from app.core.fts import install_note_items_fts
 from app.api.v1.auth import router as auth_router
 from app.api.v1.notes import router as notes_router
+from app.api.v1.entity_types import router as entity_types_router
 
 
 def init_database_safely():
@@ -85,6 +86,7 @@ def create_app() -> FastAPI:
     # Bao gồm routers
     app.include_router(auth_router, prefix=settings.API_PREFIX)
     app.include_router(notes_router, prefix=settings.API_PREFIX)
+    app.include_router(entity_types_router, prefix=settings.API_PREFIX)
 
     @app.on_event("startup")
     def on_startup():
